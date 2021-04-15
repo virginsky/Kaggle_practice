@@ -8,100 +8,70 @@ import statsmodels.api as sm
 from sklearn.linear_model import LinearRegression,Ridge,Lasso
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.preprocessing import PolynomialFeatures, StandardScaler
+from sklearn.tree import DecisionTreeClassifier
 import sys
 import os
-dir = os.path.dirname(os.path.realpath(__file__))
+from Mushroom_preprocessing import df       # preprocessing.py파일 중 전처리완료한 데이터셋인 df 호출
 
-df = pd.read_csv(dir+'./mushrooms.csv')
 # print(df)
-# print(df.info())        # y = class (e=edible, p=poisonous) / 22개의 변수
-# print(df.describe())
-# print(df.isna().sum())  # 공란데이터 없음
 
-
-''' 의미없는 분석이었음
-
-# 상관관계 확인(heatmap)
-corrMatt = df.corr()
-print(corrMatt)
-mask = np.array(corrMatt)
-mask[np.tril_indices_from(mask)] = False
-fig,ax = plt.subplots()
-fig.set_size_inches(30,10)
-sns.heatmap(corrMatt, mask=mask, vmax=1.0,square=True, annot=True)
-plt.show()      # gill-attachment  and   veil-color 이 매우 높은 상관관계를 보임(0.89)
-                머리 안쪽 갓? : gill-attachment: attached=a,descending=d,free=f,notched=n
-                버섯 머리(?) 컬러 : veil-color: brown=n,orange=o,white=w,yellow=y
-일반적인 상식?에서 컬러가 독버섯을 구분하는데 중요하다고 하기에 gill-attachment는 분석에서 제외
 '''
-
-
-
-
-# # # 모든 변수에 대해 그래프 출력(전반적인 내용 확인)
-# figure, ( (ax1, ax2, ax3), (ax4, ax5, ax6), (ax7, ax8, ax9) ) = plt.subplots(nrows=3, ncols=3)
-# figure.set_size_inches(30,30)
-# sns.countplot(data=df, hue="class", x="cap-shape", ax=ax1)            
-# sns.countplot(data=df, hue="class", x="cap-surface", ax=ax2)             
-# sns.countplot(data=df, hue="class", x="cap-color", ax=ax3)     
-# sns.countplot(data=df, hue="class", x="bruises", ax=ax4)          
-# sns.countplot(data=df, hue="class", x="odor", ax=ax5)         
-# sns.countplot(data=df, hue="class", x="gill-attachment", ax=ax6)       # 삭제예정
-# sns.countplot(data=df, hue="class", x="gill-spacing", ax=ax7)
-# sns.countplot(data=df, hue="class", x="gill-size", ax=ax8)
-# sns.countplot(data=df, hue="class", x="gill-color", ax=ax9)
-# plt.show()
-
-# figure, ( (ax1, ax2, ax3), (ax4, ax5, ax6), (ax7, ax8, ax9) ) = plt.subplots(nrows=3, ncols=3)
-# figure.set_size_inches(30,30)
-# sns.countplot(data=df, hue="class", x="stalk-shape", ax=ax1)           # 삭제예정
-# sns.countplot(data=df, hue="class", x="stalk-root", ax=ax2)            # 삭제예정 8414개 중 2480의 missing data 존재 (? 로 표기되어 not-null에 안뜸)
-# print(df['stalk-root'].value_counts()) 
-# sns.countplot(data=df, hue="class", x="stalk-surface-above-ring", ax=ax3)     
-# sns.countplot(data=df, hue="class", x="stalk-surface-below-ring", ax=ax4)          
-# sns.countplot(data=df, hue="class", x="stalk-color-above-ring", ax=ax5)         
-# sns.countplot(data=df, hue="class", x="stalk-color-below-ring", ax=ax6)       
-# sns.countplot(data=df, hue="class", x="veil-type", ax=ax7)              # 삭제예정
-# sns.countplot(data=df, hue="class", x="veil-color", ax=ax8)             # 삭제예정
-# sns.countplot(data=df, hue="class", x="ring-number", ax=ax9)
-# plt.show()
-
-# figure, ( (ax1, ax2, ax3), (ax4, ax5, ax6), (ax7, ax8, ax9) ) = plt.subplots(nrows=3, ncols=3)
-# figure.set_size_inches(30,30)
-# sns.countplot(data=df, hue="class", x="ring-type", ax=ax1)            
-# sns.countplot(data=df, hue="class", x="spore-print-color", ax=ax2)             
-# sns.countplot(data=df, hue="class", x="population", ax=ax3)     
-# sns.countplot(data=df, hue="class", x="habitat", ax=ax4)          
-# plt.show()
-
-
-
-# 변수 그래프 확인결과 영향이 낮을것으로 판단되는 변수 제외 
-df = df.copy()
-df = df.drop(columns = 'gill-attachment')
-df = df.drop(columns = 'stalk-shape')
-df = df.drop(columns = 'veil-type')
-df = df.drop(columns = 'veil-color')
-df = df.drop(columns = 'stalk-root')
-# print(df.info()) # 17개 변수.. 여전히 많지만.. ㄱㄱ
-
-
-
-
-
-
-
-# 분석 시작
-
-
-
-
-
-
-# 라벨인코딩 
+# 라벨인코딩 - 일단 이걸로 돌려보자 (나중에 종류가 많은 항목들은 원핫인코딩식으로?)
 from sklearn.preprocessing import LabelEncoder
 labelencoder=LabelEncoder()
 for columns in df.columns:
     df[columns] = labelencoder.fit_transform(df[columns])
 # print(df)   
 
+# 데이터를 로딩하고, 학습과 테스트 데이터 셋으로 분리
+X = df.drop(['class'], axis=1)
+Y = df['class']
+X_train, X_test, y_train, y_test = train_test_split(
+    X, Y, random_state=42) # stratify : target:
+# print(X_train)
+# print(X_test)
+
+# DecisionTree Classifier 생성 및 학습
+dt_clf = DecisionTreeClassifier(max_depth=7,random_state=0)
+dt_clf.fit(X_train , y_train)
+print("Accuracy on training set: {:.3f}".format(dt_clf.score(X_train, y_train)))
+print("Accuracy on test set: {:.3f}".format(dt_clf.score(X_test, y_test)))
+
+# export_graphviz()의 호출 결과로 out_file로 지정된 tree.dot 파일을 생성함. 
+from sklearn.tree import export_graphviz
+export_graphviz(dt_clf, out_file="tree.dot", impurity=True, filled=True)
+'''
+
+
+
+##########################################################################################
+
+
+# tree로 의미해석이 안되서 X변수만 one-hot encoding 후 다시 분석 시작
+df0 = df.copy()
+# print(df0)
+# print(df0['class'].value_counts())
+
+xx = df0.drop(['class'], axis=1)
+X = pd.get_dummies(xx)
+from sklearn.preprocessing import LabelEncoder
+labelencoder=LabelEncoder()
+Y = labelencoder.fit_transform(df0['class'])
+# print(X)
+# print(Y)
+# print(Y.value_counts())
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, Y, random_state=42) 
+# print(X_train)
+# print(X_test)
+
+# DecisionTree Classifier 생성 및 학습
+dt_clf = DecisionTreeClassifier(max_depth=7,random_state=0)
+dt_clf.fit(X_train , y_train)
+print("Accuracy on training set: {:.3f}".format(dt_clf.score(X_train, y_train)))
+print("Accuracy on test set: {:.3f}".format(dt_clf.score(X_test, y_test)))
+
+# export_graphviz()의 호출 결과로 out_file로 지정된 .dot 파일을 생성함. 
+from sklearn.tree import export_graphviz
+export_graphviz(dt_clf, out_file="tree3.dot", feature_names=X.columns, impurity=True, filled=True)
