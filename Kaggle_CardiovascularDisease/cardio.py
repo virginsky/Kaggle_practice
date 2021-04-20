@@ -22,36 +22,36 @@ dir = os.path.dirname(os.path.realpath(__file__))
 df = pd.read_csv(dir+'./cardio_train.csv', sep= ';')
 
 
-# print(df)
-# print(df.info())        # y = cardio (0=음성, 1=양성) / 12개 변수(id제외 시 11개)
-# print(df.describe())
-# print(df.isna().sum())  # 공란데이터 없음
-# print(df['cardio'].value_counts())
+print(df)
+print(df.info())        # y = cardio (0=음성, 1=양성) / 12개 변수(id제외 시 11개)
+print(df.describe())
+print(df.isna().sum())  # 공란데이터 없음
+print(df['cardio'].value_counts())
 
-# # # 모든 변수에 대해 그래프 출력(전반적인 내용 확인)
-# figure, ( (ax1, ax2, ax3),(ax4, ax5,ax6) ) = plt.subplots(nrows=2, ncols=3)
-# figure.set_size_inches(30,30)
-# sns.countplot(data=df, hue="cardio", x="gender", ax=ax1)      # 1 - women, 2 - men      
-# sns.countplot(data=df, hue="cardio", x="cholesterol", ax=ax2)      # 1: normal, 2: above normal, 3: well above normal       
-# sns.countplot(data=df, hue="cardio", x="gluc", ax=ax3)     #1: normal, 2: above normal, 3: well above normal
-# sns.countplot(data=df, hue="cardio", x="smoke", ax=ax4)          
-# sns.countplot(data=df, hue="cardio", x="alco", ax=ax5)         
-# sns.countplot(data=df, hue="cardio", x="active", ax=ax6)      
-# plt.show()
+# # 모든 변수에 대해 그래프 출력(전반적인 내용 확인)
+figure, ( (ax1, ax2, ax3),(ax4, ax5,ax6) ) = plt.subplots(nrows=2, ncols=3)
+figure.set_size_inches(30,30)
+sns.countplot(data=df, hue="cardio", x="gender", ax=ax1)      # 1 - women, 2 - men      
+sns.countplot(data=df, hue="cardio", x="cholesterol", ax=ax2)      # 1: normal, 2: above normal, 3: well above normal       
+sns.countplot(data=df, hue="cardio", x="gluc", ax=ax3)     #1: normal, 2: above normal, 3: well above normal
+sns.countplot(data=df, hue="cardio", x="smoke", ax=ax4)          
+sns.countplot(data=df, hue="cardio", x="alco", ax=ax5)         
+sns.countplot(data=df, hue="cardio", x="active", ax=ax6)      
+plt.show()
 
-# figure, ( (ax1, ax2, ax3),(ax4, ax5, ax6) ) = plt.subplots(nrows=2, ncols=3)
-# figure.set_size_inches(30,30)
-# sns.countplot(data=df, hue="cardio", x="age", ax=ax1)            
-# sns.countplot(data=df, hue="cardio", x="height", ax=ax2)        # 100cm 미만도 믿어야되나? 아이들? 나이 최소값은 10798=29살.. 특이값일 가능성이 높아보이는데
-# sns.countplot(data=df, hue="cardio", x="weight", ax=ax3)        # good
-# sns.countplot(data=df, hue="cardio", x="ap_hi", ax=ax4)         # 특이값 처리필요_수축기혈압
-# sns.countplot(data=df, hue="cardio", x="ap_lo", ax=ax5)         # 특이값 처리필요_이완기혈압
-# plt.show()
-# print(df['age'].value_counts())
-# print(df['height'].value_counts())
-# print(df['weight'].value_counts())
-# print(df['ap_hi'].value_counts())
-# print(df['ap_lo'].value_counts())
+figure, ( (ax1, ax2, ax3),(ax4, ax5, ax6) ) = plt.subplots(nrows=2, ncols=3)
+figure.set_size_inches(30,30)
+sns.countplot(data=df, hue="cardio", x="age", ax=ax1)            
+sns.countplot(data=df, hue="cardio", x="height", ax=ax2)        # 100cm 미만도 믿어야되나? 아이들? 나이 최소값은 10798=29살.. 특이값일 가능성이 높아보이는데
+sns.countplot(data=df, hue="cardio", x="weight", ax=ax3)        # good
+sns.countplot(data=df, hue="cardio", x="ap_hi", ax=ax4)         # 특이값 처리필요_수축기혈압
+sns.countplot(data=df, hue="cardio", x="ap_lo", ax=ax5)         # 특이값 처리필요_이완기혈압
+plt.show()
+print(df['age'].value_counts())
+print(df['height'].value_counts())
+print(df['weight'].value_counts())
+print(df['ap_hi'].value_counts())
+print(df['ap_lo'].value_counts())
 
 # id 컬럼삭제
 df0 = df.copy()
@@ -73,9 +73,9 @@ df0=df0.drop('age', axis=1)
 
 # # 이상치 처리 - ap
 
-# plt.figure(figsize=(15,10),facecolor='w') 
-# sns.scatterplot(df["ap_hi"], df["ap_lo"], hue = df["cardio"])   
-# plt.show()
+plt.figure(figsize=(15,10),facecolor='w') 
+sns.scatterplot(df["ap_hi"], df["ap_lo"], hue = df["cardio"])   
+plt.show()
 
 # 앞2개자리만 따오고 0번째가 1,2인 경우 x10
 def preprocessing_ap(x):
@@ -135,14 +135,14 @@ df0.loc[df0['BMI'] > 35, 'BMI_bin'] = 5
 df0=df0.drop(columns = 'bmi')
 df0=df0.drop(columns = 'BMI')
 
-# #새로생성한 변수들 그래프 확인
-# figure, ( (ax1, ax2),(ax3,ax4)  ) = plt.subplots(nrows=2, ncols=2)
-# figure.set_size_inches(30,30)
-# sns.countplot(data=df0, hue="cardio", x="age_bin", ax=ax1)  
-# sns.countplot(data=df0, hue="cardio", x="ap_lo2", ax=ax2)   
-# sns.countplot(data=df0, hue="cardio", x="ap_hi2", ax=ax3)   
-# sns.countplot(data=df0, hue="cardio", x="BMI", ax=ax4)          
-# plt.show()
+#새로생성한 변수들 그래프 확인
+figure, ( (ax1, ax2),(ax3,ax4)  ) = plt.subplots(nrows=2, ncols=2)
+figure.set_size_inches(30,30)
+sns.countplot(data=df0, hue="cardio", x="age_bin", ax=ax1)  
+sns.countplot(data=df0, hue="cardio", x="ap_lo2", ax=ax2)   
+sns.countplot(data=df0, hue="cardio", x="ap_hi2", ax=ax3)   
+sns.countplot(data=df0, hue="cardio", x="BMI", ax=ax4)          
+plt.show()
 
 
 
@@ -254,3 +254,12 @@ fig = plt.gcf()
 fig.set_size_inches(150, 100)
 
 plt.show()
+
+
+
+
+
+
+
+# LightGBM
+from lightgbm import LGBMClassifier
