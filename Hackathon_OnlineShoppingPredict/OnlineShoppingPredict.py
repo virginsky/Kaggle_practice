@@ -324,7 +324,7 @@ plt.figure(figsize=(10,7))
 sns.heatmap(cm1,annot=True,fmt='d')
 plt.xlabel('predicted by model')
 plt.ylabel('Truth(label)')
-plt.show()
+# plt.show()
 
 # 전년도 실적을 기반으로 한 예측모델 성능 최종 결론
 accuracy = np.mean(np.equal(result['label'],result['pred']))
@@ -336,11 +336,21 @@ print('accuracy : ',accuracy)
 print('precision : ', precision)
 print('recall : ', recall)
 print('f1 : ', f1)
+print('AUC : ', roc_auc_score(result['label'],result['pred']))
 
-
-
-
-
+# AUC graph
+from sklearn.metrics import roc_curve, auc
+false_positive_rate, true_positive_rate, thresholds = roc_curve(result['label'],result['pred'])
+roc_auc = auc(false_positive_rate, true_positive_rate)
+plt.figure(figsize=(10,10))
+plt.title('Receiver Operating Characteristic')
+plt.plot(false_positive_rate,true_positive_rate, color='red',label = 'AUC = %0.2f' % roc_auc)
+plt.legend(loc = 'lower right')
+plt.plot([0, 1], [0, 1],linestyle='--')
+plt.axis('tight')
+plt.ylabel('True Positive Rate')
+plt.xlabel('False Positive Rate')
+plt.show()
 
 
 
@@ -423,7 +433,7 @@ print('accuracy[%f]' % accuracy_score(y_true, y_pred))
 
 
 '''
-gg... 다음기회에
+# gg... 다음기회에
 #################################### MLA predictions #################################
 
 #Machine Learning Algorithm (MLA) Selection and Initialization
