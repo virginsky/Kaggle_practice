@@ -90,7 +90,7 @@ df1 = df0.pivot_table(values='total', index='customer_id', columns='yyyy-mm', ag
 df1 = df1.fillna(0)     # NaN값은 의사결정트리 분석이 작동하지 않기에 0으로 채움
 
 
-# #생성한 모델을 적용할 데이터셋(x : 2009-12 ~ 2010-11 / y : 2010-12)
+# #model생성을 위한 데이터셋(x : 2009-12 ~ 2010-11 / y : 2010-12)
 df_t = df1.iloc[:,:13]  
 df_t['y'] = np.where(df_t['2010-12']>300, 1, 0)     # 0 : 300이하 / 1: 300초과
 df_t=df_t.drop(columns = '2010-12')
@@ -117,7 +117,7 @@ df_t.columns = ['12m_before','11m_before','10m_before','09m_before','08m_before'
 # plt.show()
 
 
-# #model생성을 위한 데이터셋(x : 2010-12 ~ 2011-11 / y : 아직없음)
+# #생성한 모델을 적용할 데이터셋(x : 2010-12 ~ 2011-11 / y : 아직없음)
 df_p = df1.iloc[:,12:]  
 # print(df_p)
 df_p.columns = ['12m_before','11m_before','10m_before','09m_before','08m_before','07m_before','06m_before','05m_before','04m_before','03m_before','02m_before','01m_before']
