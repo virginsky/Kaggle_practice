@@ -184,19 +184,17 @@ print("Ada boosting Test Accuracy:",metrics.accuracy_score(y_test, ada_y_pred))
 from xgboost import XGBClassifier
 import xgboost as xgb
 
-# 넘파이 형태의 학습 데이터 세트와 테스트 데이터를 DMatrix로 변환하는 예제
+# 넘파이 형태의 학습 데이터 세트와 테스트 데이터를 DMatrix로 변환
 dtrain = xgb.DMatrix(data=X_train, label = y_train)
 dtest = xgb.DMatrix(data=X_test, label=y_test)
 
 # parameters 변경해가며 돌리기
-
 params = {'booster' : 'gbtree', 'max_depth' : 3,
          'eta' : 0.1, 
          'objective' : 'binary:logistic',
          'eval_metric' : 'logloss',
          'early_stoppings' : 100, 'lambda':10, 'colsample_bytree' : 0.5}
-
-num_rounds = 30
+num_rounds = 300
 
 # train 데이터 세트는 'train', evaluation(test) 데이터 세트는 'eval' 로 명기
 wlist = [(dtrain, 'train'), (dtest,'eval')]
@@ -350,7 +348,7 @@ plt.plot([0, 1], [0, 1],linestyle='--')
 plt.axis('tight')
 plt.ylabel('True Positive Rate')
 plt.xlabel('False Positive Rate')
-plt.show()
+# plt.show()
 
 
 
@@ -433,7 +431,7 @@ print('accuracy[%f]' % accuracy_score(y_true, y_pred))
 
 
 '''
-# gg... 다음기회에
+# 일단 CatBoost가 좋다고 나오긴했는데 Accurancy는 많이 떨어지는데..? MLA Test Accuracy Mean : 0.896394 
 #################################### MLA predictions #################################
 
 #Machine Learning Algorithm (MLA) Selection and Initialization
@@ -448,7 +446,9 @@ from sklearn.preprocessing import OneHotEncoder, LabelEncoder
 from sklearn import feature_selection
 from sklearn import model_selection
 from sklearn import metrics
-
+X = df_t.drop(['y'], axis=1)
+y = df_t['y']
+X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42) 
 MLA = [
     #Ensemble Methods
     ensemble.AdaBoostClassifier(),
@@ -461,59 +461,56 @@ MLA = [
     linear_model.LogisticRegressionCV(),
     linear_model.RidgeClassifierCV(),
     linear_model.SGDClassifier(),
-    
     #Nearest Neighbor
     KNeighborsClassifier(),
-    
     #Trees    
     tree.DecisionTreeClassifier(),
     tree.ExtraTreeClassifier(),
     XGBClassifier(),
     LGBMClassifier(),
     CatBoostClassifier()]
-
-
-
 #split dataset in cross-validation with this splitter class: http://scikit-learn.org/stable/modules/generated/sklearn.model_selection.ShuffleSplit.html#sklearn.model_selection.ShuffleSplit
 #note: this is an alternative to train_test_split
 cv_split = model_selection.ShuffleSplit(n_splits = 10, test_size = .3, train_size = .6, random_state = 0 ) # run model 10x with 60/30 split intentionally leaving out 10%
-
 #create table to compare MLA metrics
 MLA_columns = ['MLA Name', 'MLA Parameters','MLA Train Accuracy Mean', 'MLA Test Accuracy Mean', 'MLA Test Accuracy 3*STD' ,'MLA Time']
 MLA_compare = pd.DataFrame(columns = MLA_columns)
-
 #create table to compare MLA predictions
 MLA_predict = y
-
-
-
+print('모델 작동전',X.shape,y.shape)
 #index through MLA and save performance to table
 row_index = 0
 for alg in MLA:
-
+    print('for 안에서모델 작동전',X.shape,y.shape)
     #set name and parameters
     MLA_name = alg.__class__.__name__
     MLA_compare.loc[row_index, 'MLA Name'] = MLA_name
     MLA_compare.loc[row_index, 'MLA Parameters'] = str(alg.get_params())
-    
-    #score model with cross validation: http://scikit-learn.org/stable/modules/generated/sklearn.model_selection.cross_validate.html#sklearn.model_selection.cross_validate
-    cv_results = model_selection.cross_validate(alg, X, y, cv  = cv_split,return_train_score=True)
-
+    print('for 안에서모델 작동전1',X.shape,y.shape)
+    print('MLA 작동전 shape',MLA_predict.shape)
+#     #score model with cross validation: http://scikit-learn.org/stable/modules/generated/sklearn.model_selection.cross_validate.html#sklearn.model_selection.cross_validate
+    cv_results = model_selection.cross_validate(alg, X_train, y_train, cv  = cv_split,return_train_score=True)
+    print(alg)
+    print('for 안에서모델 작동후',X.shape,y.shape)
+    print('MLA 작동후 shape', MLA_predict.shape)
     MLA_compare.loc[row_index, 'MLA Time'] = cv_results['fit_time'].mean()
     MLA_compare.loc[row_index, 'MLA Train Accuracy Mean'] = cv_results['train_score'].mean()
     MLA_compare.loc[row_index, 'MLA Test Accuracy Mean'] = cv_results['test_score'].mean()   
     #if this is a non-bias random sample, then +/-3 standard deviations (std) from the mean, should statistically capture 99.7% of the subsets
     MLA_compare.loc[row_index, 'MLA Test Accuracy 3*STD'] = cv_results['test_score'].std()*3   #let's know the worst that can happen!
-    
-
     #save MLA predictions - see section 6 for usage
-    alg.fit(X, y)
-    MLA_predict[MLA_name] = alg.predict(X)
-    
+    alg.fit(X_train,y_train)
+    MLA_predict[MLA_name] = alg.predict(X_test)
     row_index+=1
-
-    
-
 MLA_compare.sort_values(by = ['MLA Test Accuracy Mean'], ascending = False, inplace = True)
 print(MLA_compare)
+
+#barplot using https://seaborn.pydata.org/generated/seaborn.barplot.html
+sns.barplot(x='MLA Test Accuracy Mean', y = 'MLA Name', data = MLA_compare, color = 'm')
+
+#prettify using pyplot: https://matplotlib.org/api/pyplot_api.html
+plt.title('Machine Learning Algorithm Accuracy Score \n')
+plt.xlabel('Accuracy Score (%)')
+plt.ylabel('Algorithm')
+plt.show()
 '''
