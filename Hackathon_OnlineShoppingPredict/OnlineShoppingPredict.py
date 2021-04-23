@@ -13,6 +13,8 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn import datasets
 from sklearn.model_selection import train_test_split
 from sklearn import metrics
+from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score
+from sklearn.metrics import confusion_matrix, f1_score, roc_auc_score
 import sys
 import os
 import statistics
@@ -210,8 +212,6 @@ preds = [ 1 if x > 0.5 else 0 for x in pred_probs]
 print('예측값 10개만 표시: ', preds[:10])
 
 # 혼동행렬, 정확도, 정밀도, 재현율, F1, AUC 불러오기
-from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score
-from sklearn.metrics import confusion_matrix, f1_score, roc_auc_score
 import warnings
 def get_clf_eval(y_test, y_pred):
     confusion = confusion_matrix(y_test, y_pred)
@@ -228,7 +228,7 @@ def get_clf_eval(y_test, y_pred):
     print('AUC: {:.4f}'.format(AUC))
 
 get_clf_eval(y_test, preds)
-
+'''
 from xgboost import plot_importance
 import matplotlib.pyplot as plt
 fig, ax = plt.subplots(figsize=(10, 12))
@@ -238,7 +238,7 @@ xgb.plot_tree(xgb_model, num_trees=0, rankdir='LR')
 fig = plt.gcf()
 fig.set_size_inches(150, 100)
 # plt.show()
-
+'''
 
 
 # Light GBM
@@ -264,25 +264,44 @@ print("Light GBM Test score: ",lgbm_wrapper.score(X_test, y_test))
 
 
 
+# Cat Boost Classifier
+import catboost
+from catboost import CatBoostClassifier, Pool
 
-
+params = {'loss_function':'Logloss', # objective function
+          'eval_metric':'AUC', # metric
+          'verbose': 200, # output to stdout info about training process every 200 iterations
+          }
+cbc = CatBoostClassifier(**params)
+cbc.fit(X_train, y_train, # data to train on (required parameters, unless we provide X as a pool object, will be shown below)
+          eval_set=(X_test, y_test), # data to validate on
+          use_best_model=True, # True if we don't want to save trees created after iteration with the best validation score
+          );
+print("CatBoost Train score: ",cbc.score(X_train, y_train))
+print("CatBoost Test score: ",cbc.score(X_test, y_test))
+feature_importance_df = pd.DataFrame(cbc.get_feature_importance(prettified=True))
+print(feature_importance_df)
+plt.figure(figsize=(12, 6));
+sns.barplot(x="Importances", y="Feature Id", data=feature_importance_df);
+plt.title('CatBoost features Importances:');
+# plt.show()
 
 
 ################################### df_p에 모델 적용 #####################################
 
-# final 모델 적용 : xgb_model
+# final 모델 적용 : Cat Boost (다 돌려본결과 정확도가 약간 떨어져도 최종 AUC는 이 모델이 가장 잘나옴)
     # clf_model : DecisionTree Accuracy on test set: 0.903
     # rf_model : RandomForest Train score:  0.90736984448952
     # ada_model : Ada boosting Accuracy: 0.9046653144016227
     # xgb_model : 0.9074
     # lgbm_wrapper_model : Light GBM Test score : 0.8904665314401623
+    # cbc : Cat Boost Test Score : 0.9066937119675457
 
-# Finalize model
-import pickle
 
 # Save model to disk
+import pickle
 filename = 'Final_Model.sav'
-pickle.dump(xgb_model, open(filename, 'wb'))
+pickle.dump(cbc, open(filename, 'wb')) #적용할 모델을 여기에 입력
 
 # Load model from disk and use it to make new predictions
 loaded_model = pickle.load(open(filename, 'rb'))
@@ -290,9 +309,8 @@ loaded_model = pickle.load(open(filename, 'rb'))
 # print(result)
 
 # Load test dataset
-final_predict = df_p.copy()
-X_train = final_predict
-pred = rf_model.predict(X_train)    # 모델을 적용한 예측값
+for_predict = df_p.copy()
+pred = loaded_model.predict(for_predict)    # 모델을 적용한 예측값
 # print(pred.shape())
 
 
@@ -312,9 +330,9 @@ df_p['pred'] = pred
 result = pd.read_csv(dir+'./label.csv')
 result['pred'] = pred
 result['compare'] = np.where(result['label'] == result['pred'], 1, 0)   #일치하면 1, 불일치하면 0
-print(result)
-print(result['compare'].value_counts())
-print(result['compare'].value_counts(1))
+# print(result)
+# print(result['compare'].value_counts())
+# print(result['compare'].value_counts(1))
 
 # confusion matrix (label vs pred)
 cm1=confusion_matrix(result['label'], result['pred'])
@@ -330,6 +348,7 @@ right = np.sum(result['label'] * result['pred'] == 1)
 precision = right / np.sum(result['pred'])
 recall = right / np.sum(result['label'])
 f1 = 2 * precision*recall/(precision+recall)
+print('Final apply model : Cat Boost')
 print('accuracy : ',accuracy)
 print('precision : ', precision)
 print('recall : ', recall)
@@ -348,7 +367,7 @@ plt.plot([0, 1], [0, 1],linestyle='--')
 plt.axis('tight')
 plt.ylabel('True Positive Rate')
 plt.xlabel('False Positive Rate')
-# plt.show()
+plt.show()
 
 
 
