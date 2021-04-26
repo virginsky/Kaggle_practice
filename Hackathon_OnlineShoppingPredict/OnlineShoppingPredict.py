@@ -24,7 +24,7 @@ df = pd.read_csv(dir+'./train.csv')
 
 # print(df)               # order_id, product_id, description, Qty, price 분석에 필요x
 # print(df.info())        # order date type이 시분초까지 다 나와있는 object -> 조절 필요
-# print(df.describe())    # Qty 및 total에 마이너스값이 있지만 환불일 것으로 추정(고객별 합계 확인해서 더블체크 필요)
+print(df.describe())    # Qty 및 total에 마이너스값이 있지만 환불일 것으로 추정(고객별 합계 확인해서 더블체크 필요)
 # print(df.isna().sum())  # 공란데이터 없음
 
 # ## order date 형식 변경(datetime 사용)
@@ -380,7 +380,7 @@ plt.show()
 
 
 
-
+# 국가별 평균구매량 오름차순 정렬 후 5분위 분류
 
 
 
