@@ -24,7 +24,7 @@ df = pd.read_csv(dir+'./train.csv')
 
 # print(df)               # order_id, product_id, description, Qty, price 분석에 필요x
 # print(df.info())        # order date type이 시분초까지 다 나와있는 object -> 조절 필요
-print(df.describe())    # Qty 및 total에 마이너스값이 있지만 환불일 것으로 추정(고객별 합계 확인해서 더블체크 필요)
+# print(df.describe())    # Qty 및 total에 마이너스값이 있지만 환불일 것으로 추정(고객별 합계 확인해서 더블체크 필요)
 # print(df.isna().sum())  # 공란데이터 없음
 
 # ## order date 형식 변경(datetime 사용)
@@ -53,12 +53,40 @@ df=df.drop(columns = 'month')
 #    "고객별 2009-12 ~ 2010-11을 변수 / 2010-12 total 계가 300이 넘는지를 y로 모델 학습 및 테스트"
 #    "해당 모델을 동일기간인 2010-12 ~ 2011-11을 변수로 하는 데이터에 적용하여 2011-12를 예측"
 #     하여 year, month컬럼은 만들 필요가 없는고 yyyy-mm의 형태 데이터 필요
+df['yyyy-mm'] = df['order_date'].dt.strftime('%Y-%m')
 
 
+# Groupby
+# print(df)
+df_groupsum = df.groupby('customer_id').sum().reset_index()
+# df_groupsum1 = df.groupby(['customer_id', 'yyyy-mm']).sum().reset_index()
+# print(df_groupsum) 
 
 
+# print(df_groupsum1) # id별 월별 total계 -> 무시
+df_groupcountry = df.groupby('country').sum().reset_index()
+# print(df_groupcountry.sort_values(by='total', ascending=True)) 
 
 
+# # 40개국가를 total계 오름차순으로 정렬해서 rank 부여 (1~41) 후 df에 추가
+grouped_country = df_groupcountry.sort_values(by='total', ascending=True)
+grouped_country = grouped_country.drop(columns = ['quantity', 'price','customer_id'])
+# print(grouped_country)
+# print(grouped_country.iloc[:8])
+# print(grouped_country.iloc[8:16])
+# print(grouped_country.iloc[16:24])
+# print(grouped_country.iloc[24:32])
+# print(grouped_country.iloc[32:])
+grouped_country['r_country'] = grouped_country['total'].rank(method = 'min', ascending = True)
+grouped_country = grouped_country.drop(columns = 'total')
+# print(grouped_country)
+df.insert(8,'r_country',df['country'].map(grouped_country.set_index('country')['r_country']))
+# print(df)
+
+df_groupcountry = df.groupby(['customer_id', 'r_country']).sum().reset_index()
+# print(df_groupcountry) #customer_id - r_country 연결시키기 위한 데이터셋 (5927rows : 13개 rows가 증가됨)
+df_groupcountry1 = df_groupcountry.drop_duplicates(['customer_id'])
+# print(df_groupcountry1) #id별 r_country와 total(sum적용됨) 조회 가능
 
 
 # ####################### 데이터 전처리(?) 시작 #################################
@@ -81,15 +109,17 @@ accsum_total = df0.pivot_table(values='total', index='yyyy-mm', columns='country
 ax=accsum_total.plot(marker = 'o')
 plt.show()
 print(df0.pivot_table(values='total', index='yyyy-mm', columns='country', aggfunc=sum))
-'''
 #  -> 40개 국가.. 추구하는게 고객id별 12월 예측이기에 국가가 큰 영향을 미치지 않을것이라고 추정
 #  -> 우선 분석에서 제외 후 모델정확도가 떨어지면 그때 다시 고려
-
+#  -> 21.04.27 : 넣어봤더니 AUC 더 떨어짐.. 다시 삭제
+#                (이미 월별금액이 있는데 country를 오름차순정렬하여 rank변환한 자료도 결국 금액정보이기 때문일 것으로 추정)
+'''
 
 # 2009-12 ~ 2011-11 id별 total계를 구성하는 새로운 데이터셋 df1 생성(pivot활용)
 df1 = df0.pivot_table(values='total', index='customer_id', columns='yyyy-mm', aggfunc=sum)
 # print(df1)    # [780502 rows x 5 columns] -> [5914 rows x 24 columns]
 df1 = df1.fillna(0)     # NaN값은 의사결정트리 분석이 작동하지 않기에 0으로 채움
+# print(df1.info())
 
 
 # #model생성을 위한 데이터셋(x : 2009-12 ~ 2010-11 / y : 2010-12)
@@ -98,7 +128,15 @@ df_t['y'] = np.where(df_t['2010-12']>300, 1, 0)     # 0 : 300이하 / 1: 300초�
 df_t=df_t.drop(columns = '2010-12')
 # print(df_t)
 df_t.columns = ['12m_before','11m_before','10m_before','09m_before','08m_before','07m_before','06m_before','05m_before','04m_before','03m_before','02m_before','01m_before','y']
-# print(df_t)
+
+
+
+
+
+
+
+
+
 
 # # 상관관계 그래프
 # def correlation_heatmap(df_t):
@@ -123,9 +161,22 @@ df_t.columns = ['12m_before','11m_before','10m_before','09m_before','08m_before'
 df_p = df1.iloc[:,12:]  
 # print(df_p)
 df_p.columns = ['12m_before','11m_before','10m_before','09m_before','08m_before','07m_before','06m_before','05m_before','04m_before','03m_before','02m_before','01m_before']
-# print(df_p)     # 모델적용 시 충돌?이 있을까봐 변수 컬럼명을 동일하게 변경
 
 
+
+'''
+# ###########추가된 변수 관련 : 넣으니까 점수 떨어짐 (AUC : 0.66 -> 0.65)
+df_t['customer_id'] = df_t.index
+df_t.insert(0,'r_country',df_t['customer_id'].map(df_groupcountry1.set_index('customer_id')['r_country']))
+df_t.insert(1,'t_total',df_t['customer_id'].map(df_groupcountry1.set_index('customer_id')['total']))
+df_t=df_t.drop(columns = 'customer_id')
+# print(df_t)
+df_p['customer_id'] = df_p.index
+df_p.insert(0,'r_country',df_p['customer_id'].map(df_groupcountry1.set_index('customer_id')['r_country']))
+df_p.insert(1,'t_total',df_p['customer_id'].map(df_groupcountry1.set_index('customer_id')['total']))
+df_p=df_p.drop(columns = 'customer_id')
+# print(df_p)
+'''
 
 
 
