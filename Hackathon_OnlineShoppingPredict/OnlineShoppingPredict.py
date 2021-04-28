@@ -89,6 +89,23 @@ df_groupcountry1 = df_groupcountry.drop_duplicates(['customer_id'])
 # print(df_groupcountry1) #id별 r_country와 total(sum적용됨) 조회 가능
 
 
+# product_id 변수추가 시도 (중요도는 높은 변수로 잡히지만 AUC점수는 떨어짐)
+df['p3'] = df['product_id'].str[:3]
+grouped_product = df.groupby('p3').sum().reset_index()
+grouped_product['r_product'] = grouped_product['total'].rank(method = 'min', ascending = True) # product 3자리에 1~128위의 rank 부여
+grouped_product2 = df.groupby(['customer_id', 'p3']).sum().reset_index().sort_values(by="total", ascending=False)
+grouped_product2 = grouped_product2.drop_duplicates(['customer_id'])
+grouped_product2.insert(2, 'r_product', grouped_product2['p3'].map(grouped_product.set_index('p3')['r_product']))
+# print(grouped_product)  # 3글자만 따온 p3의 total에따라 rank 부여한 r_product 생성
+# print(grouped_product2) # customer_id별로 대표p3 선정 후, r_product 맵핑 -> 최종 변수에 추가
+
+
+
+
+
+
+
+
 # ####################### 데이터 전처리(?) 시작 #################################
 
 
@@ -164,20 +181,23 @@ df_p.columns = ['12m_before','11m_before','10m_before','09m_before','08m_before'
 
 
 
-'''
+
 # ###########추가된 변수 관련 : 넣으니까 점수 떨어짐 (AUC : 0.66 -> 0.65)
 df_t['customer_id'] = df_t.index
 df_t.insert(0,'r_country',df_t['customer_id'].map(df_groupcountry1.set_index('customer_id')['r_country']))
 df_t.insert(1,'t_total',df_t['customer_id'].map(df_groupcountry1.set_index('customer_id')['total']))
+df_t.insert(2,'r_product',df_t['customer_id'].map(grouped_product2.set_index('customer_id')['r_product']))
 df_t=df_t.drop(columns = 'customer_id')
 # print(df_t)
 df_p['customer_id'] = df_p.index
 df_p.insert(0,'r_country',df_p['customer_id'].map(df_groupcountry1.set_index('customer_id')['r_country']))
 df_p.insert(1,'t_total',df_p['customer_id'].map(df_groupcountry1.set_index('customer_id')['total']))
+df_p.insert(2,'r_product',df_p['customer_id'].map(grouped_product2.set_index('customer_id')['r_product']))
 df_p=df_p.drop(columns = 'customer_id')
 # print(df_p)
-'''
-
+# # 중요도 낮은 변수 삭제시도 : 효과x
+# df_t = df_t.drop(columns = ['10m_before', 'r_country', '11m_before'])
+# df_p = df_p.drop(columns = ['10m_before', 'r_country', '11m_before'])
 
 
 
@@ -430,8 +450,6 @@ plt.show()
 ########################################## 끝 ########################################
 
 
-
-# 국가별 평균구매량 오름차순 정렬 후 5분위 분류
 
 
 
