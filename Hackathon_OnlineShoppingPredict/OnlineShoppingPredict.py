@@ -22,18 +22,18 @@ import statistics
 dir = os.path.dirname(os.path.realpath(__file__))
 df = pd.read_csv(dir+'./train.csv')
 
-# print(df)               # order_id, product_id, description, Qty, price 분석에 필요x
-# print(df.info())        # order date type이 시분초까지 다 나와있는 object -> 조절 필요
-# print(df.describe())    # Qty 및 total에 마이너스값이 있지만 환불일 것으로 추정(고객별 합계 확인해서 더블체크 필요)
-# print(df.isna().sum())  # 공란데이터 없음
+print(df)               # order_id, product_id, description, Qty, price 분석에 필요x
+print(df.info())        # order date type이 시분초까지 다 나와있는 object -> 조절 필요
+print(df.describe())    # Qty 및 total에 마이너스값이 있지만 환불일 것으로 추정(고객별 합계 확인해서 더블체크 필요)
+print(df.isna().sum())  # 공란데이터 없음
 
 # ## order date 형식 변경(datetime 사용)
 df['order_date'] = pd.to_datetime(df['order_date'], format='%Y-%m', errors='raise')
-# print(df['order_date'])
-# print(df.info())        #object -> datetime64로 변경됨
+print(df['order_date'])
+print(df.info())        #object -> datetime64로 변경됨
 
 
-'''
+
 #연간/월간 전체 소비추세 확인
 #order date를 활용해 year / month 컬럼 생성
 df['year'] = df['order_date'].dt.year
@@ -41,52 +41,56 @@ df['month'] = df['order_date'].dt.month
 print(df.year)
 print(df.month)
 # 연도별,월별 total 합계 그래프
+print(df.pivot_table(values='total', index='month', columns='year', aggfunc=sum))
 accsum_total = df.pivot_table(values='total', index='month', columns='year', aggfunc=sum)
 ax=accsum_total.plot(marker = 'o')
-plt.show()        # sum of total(per year,month).png 파일 확인
-print(df.pivot_table(values='total', index='month', columns='year', aggfunc=sum))
-df=df.drop(columns = 'year')
-df=df.drop(columns = 'month')
-'''
+# plt.show()        # sum of total(per year,month).png 파일 확인
 #  9월부터 소비가 증가해 11월 최대치, 12월은 떨어짐(연간 비슷한 추세를 보임)
 #  2011년 12월의 소비를 예측하는 것이기에, 전체 월별실적을 변수로 하는 것 보다는 
 #    "고객별 2009-12 ~ 2010-11을 변수 / 2010-12 total 계가 300이 넘는지를 y로 모델 학습 및 테스트"
 #    "해당 모델을 동일기간인 2010-12 ~ 2011-11을 변수로 하는 데이터에 적용하여 2011-12를 예측"
-#     하여 year, month컬럼은 만들 필요가 없는고 yyyy-mm의 형태 데이터 필요
+#     하여 year, month컬럼은 만들 필요가 없고 yyyy-mm의 형태 데이터 필요
+df=df.drop(columns = 'year')
+df=df.drop(columns = 'month')
 df['yyyy-mm'] = df['order_date'].dt.strftime('%Y-%m')
+print(df)
+
+
+
 
 
 # Groupby
-# print(df)
+
+
 df_groupsum = df.groupby('customer_id').sum().reset_index()
 # df_groupsum1 = df.groupby(['customer_id', 'yyyy-mm']).sum().reset_index()
-# print(df_groupsum) 
+print(df_groupsum) 
 
 
 # print(df_groupsum1) # id별 월별 total계 -> 무시
 df_groupcountry = df.groupby('country').sum().reset_index()
-# print(df_groupcountry.sort_values(by='total', ascending=True)) 
+print(df_groupcountry.sort_values(by='total', ascending=True)) 
 
 
-# # 40개국가를 total계 오름차순으로 정렬해서 rank 부여 (1~41) 후 df에 추가
+# # 40개국가를 total계 오름차순으로 정렬해서 rank 부여 (1~41) 후 df에 추가 (범주화화고싶었지만 실패)
 grouped_country = df_groupcountry.sort_values(by='total', ascending=True)
 grouped_country = grouped_country.drop(columns = ['quantity', 'price','customer_id'])
-# print(grouped_country)
-# print(grouped_country.iloc[:8])
-# print(grouped_country.iloc[8:16])
-# print(grouped_country.iloc[16:24])
-# print(grouped_country.iloc[24:32])
-# print(grouped_country.iloc[32:])
+print(grouped_country)
+print(grouped_country.iloc[:8])
+print(grouped_country.iloc[8:16])
+print(grouped_country.iloc[16:24])
+print(grouped_country.iloc[24:32])
+print(grouped_country.iloc[32:])
 grouped_country['r_country'] = grouped_country['total'].rank(method = 'min', ascending = True)
 grouped_country = grouped_country.drop(columns = 'total')
-# print(grouped_country)
+print(grouped_country)
 df.insert(8,'r_country',df['country'].map(grouped_country.set_index('country')['r_country']))
-# print(df)
+print(df)
 
 df_groupcountry = df.groupby(['customer_id', 'r_country']).sum().reset_index()
-# print(df_groupcountry) #customer_id - r_country 연결시키기 위한 데이터셋 (5927rows : 13개 rows가 증가됨)
+print(df_groupcountry) #customer_id - r_country 연결시키기 위한 데이터셋 (5927rows : 13개 rows가 증가됨) -> country가 2개이상 등록된 아이디가 13개 있었는듯
 df_groupcountry1 = df_groupcountry.drop_duplicates(['customer_id'])
-# print(df_groupcountry1) #id별 r_country와 total(sum적용됨) 조회 가능
+print(df_groupcountry1) #id별 r_country와 total(sum적용됨) 조회 가능
 
 
 # product_id 변수추가 시도 (중요도는 높은 변수로 잡히지만 AUC점수는 떨어짐)
@@ -96,8 +100,8 @@ grouped_product['r_product'] = grouped_product['total'].rank(method = 'min', asc
 grouped_product2 = df.groupby(['customer_id', 'p3']).sum().reset_index().sort_values(by="total", ascending=False)
 grouped_product2 = grouped_product2.drop_duplicates(['customer_id'])
 grouped_product2.insert(2, 'r_product', grouped_product2['p3'].map(grouped_product.set_index('p3')['r_product']))
-# print(grouped_product)  # 3글자만 따온 p3의 total에따라 rank 부여한 r_product 생성
-# print(grouped_product2) # customer_id별로 대표p3 선정 후, r_product 맵핑 -> 최종 변수에 추가
+print(grouped_product)  # 3글자만 따온 p3의 total에따라 rank 부여한 r_product 생성
+print(grouped_product2) # customer_id별로 대표p3 선정 후, r_product 맵핑 -> 최종 변수에 추가
 
 
 
@@ -113,14 +117,13 @@ grouped_product2.insert(2, 'r_product', grouped_product2['p3'].map(grouped_produ
 # df를 df0로 복사 후 필요없는 컬럼 삭제
 df0 = df.copy() 
 df0 = df0.drop(columns = ['order_id', 'product_id', 'description', 'quantity', 'price'])
-# print(df0)
-
-# # yyyy-mm 항목 생성
-df0['yyyy-mm'] = df['order_date'].dt.strftime('%Y-%m')
-# print(df0['yyyy-mm'])
+print(df0)
 
 
 '''
+# # yyyy-mm 항목 생성
+df0['yyyy-mm'] = df['order_date'].dt.strftime('%Y-%m')
+print(df0)
 # yyyy-mm & country total 합계 그래프
 accsum_total = df0.pivot_table(values='total', index='yyyy-mm', columns='country', aggfunc=sum)
 ax=accsum_total.plot(marker = 'o')
@@ -132,18 +135,19 @@ print(df0.pivot_table(values='total', index='yyyy-mm', columns='country', aggfun
 #                (이미 월별금액이 있는데 country를 오름차순정렬하여 rank변환한 자료도 결국 금액정보이기 때문일 것으로 추정)
 '''
 
+
 # 2009-12 ~ 2011-11 id별 total계를 구성하는 새로운 데이터셋 df1 생성(pivot활용)
 df1 = df0.pivot_table(values='total', index='customer_id', columns='yyyy-mm', aggfunc=sum)
-# print(df1)    # [780502 rows x 5 columns] -> [5914 rows x 24 columns]
+print(df1)    # [780502 rows x 5 columns] -> [5914 rows x 24 columns]
 df1 = df1.fillna(0)     # NaN값은 의사결정트리 분석이 작동하지 않기에 0으로 채움
-# print(df1.info())
+print(df1.info())
 
 
 # #model생성을 위한 데이터셋(x : 2009-12 ~ 2010-11 / y : 2010-12)
 df_t = df1.iloc[:,:13]  
 df_t['y'] = np.where(df_t['2010-12']>300, 1, 0)     # 0 : 300이하 / 1: 300초과
 df_t=df_t.drop(columns = '2010-12')
-# print(df_t)
+print(df_t)
 df_t.columns = ['12m_before','11m_before','10m_before','09m_before','08m_before','07m_before','06m_before','05m_before','04m_before','03m_before','02m_before','01m_before','y']
 
 
@@ -155,50 +159,50 @@ df_t.columns = ['12m_before','11m_before','10m_before','09m_before','08m_before'
 
 
 
-# # 상관관계 그래프
-# def correlation_heatmap(df_t):
-#     _ , ax = plt.subplots(figsize =(14, 12))
-#     colormap = sns.diverging_palette(220, 10, as_cmap = True)
+# 상관관계 그래프
+def correlation_heatmap(df_t):
+    _ , ax = plt.subplots(figsize =(14, 12))
+    colormap = sns.diverging_palette(220, 10, as_cmap = True)
     
-#     _ = sns.heatmap(
-#         df_t.corr(), 
-#         cmap = colormap,
-#         square=True, 
-#         cbar_kws={'shrink':.9 }, 
-#         ax=ax,
-#         annot=True, 
-#         linewidths=0.1,vmax=1.0, linecolor='white',
-#         annot_kws={'fontsize':12 }
-#     )
-# correlation_heatmap(df_t)
+    _ = sns.heatmap(
+        df_t.corr(), 
+        cmap = colormap,
+        square=True, 
+        cbar_kws={'shrink':.9 }, 
+        ax=ax,
+        annot=True, 
+        linewidths=0.1,vmax=1.0, linecolor='white',
+        annot_kws={'fontsize':12 }
+    )
+correlation_heatmap(df_t)
 # plt.show()
 
 
 # #생성한 모델을 적용할 데이터셋(x : 2010-12 ~ 2011-11 / y : 아직없음)
 df_p = df1.iloc[:,12:]  
-# print(df_p)
+print(df_p)
 df_p.columns = ['12m_before','11m_before','10m_before','09m_before','08m_before','07m_before','06m_before','05m_before','04m_before','03m_before','02m_before','01m_before']
 
 
 
-
+'''
 # ###########추가된 변수 관련 : 넣으니까 점수 떨어짐 (AUC : 0.66 -> 0.65)
 df_t['customer_id'] = df_t.index
 df_t.insert(0,'r_country',df_t['customer_id'].map(df_groupcountry1.set_index('customer_id')['r_country']))
 df_t.insert(1,'t_total',df_t['customer_id'].map(df_groupcountry1.set_index('customer_id')['total']))
 df_t.insert(2,'r_product',df_t['customer_id'].map(grouped_product2.set_index('customer_id')['r_product']))
 df_t=df_t.drop(columns = 'customer_id')
-# print(df_t)
+print(df_t)
 df_p['customer_id'] = df_p.index
 df_p.insert(0,'r_country',df_p['customer_id'].map(df_groupcountry1.set_index('customer_id')['r_country']))
 df_p.insert(1,'t_total',df_p['customer_id'].map(df_groupcountry1.set_index('customer_id')['total']))
 df_p.insert(2,'r_product',df_p['customer_id'].map(grouped_product2.set_index('customer_id')['r_product']))
 df_p=df_p.drop(columns = 'customer_id')
-# print(df_p)
+print(df_p)
 # # 중요도 낮은 변수 삭제시도 : 효과x
 # df_t = df_t.drop(columns = ['10m_before', 'r_country', '11m_before'])
 # df_p = df_p.drop(columns = ['10m_before', 'r_country', '11m_before'])
-
+'''
 
 
 
@@ -376,21 +380,21 @@ pickle.dump(cbc, open(filename, 'wb')) #적용할 모델을 여기에 입력
 
 # Load model from disk and use it to make new predictions
 loaded_model = pickle.load(open(filename, 'rb'))
-# result = loaded_model.score(X_test, y_test)
-# print(result)
+result = loaded_model.score(X_test, y_test)
+print("loaded model score : ",result)
 
 # Load test dataset
 for_predict = df_p.copy()
 pred = loaded_model.predict(for_predict)    # 모델을 적용한 예측값
-# print(pred.shape())
-
+print(pred)
+print(len(pred))
 
 # 예측값 채우기
 pred = np.array(pred)
 pred = pred.reshape(-1,1)
 df_p['pred'] = pred
-# print(df_p)
-# print(df_p['pred'].value_counts())
+print(df_p)
+print(df_p['pred'].value_counts())
 
 
 
@@ -401,9 +405,9 @@ df_p['pred'] = pred
 result = pd.read_csv(dir+'./label.csv')
 result['pred'] = pred
 result['compare'] = np.where(result['label'] == result['pred'], 1, 0)   #일치하면 1, 불일치하면 0
-# print(result)
-# print(result['compare'].value_counts())
-# print(result['compare'].value_counts(1))
+print(result)
+print(result['compare'].value_counts())
+print(result['compare'].value_counts(1))
 
 # confusion matrix (label vs pred)
 cm1=confusion_matrix(result['label'], result['pred'])
