@@ -22,7 +22,7 @@ import statistics
 dir = os.path.dirname(os.path.realpath(__file__))
 df = pd.read_csv(dir+'./train.csv')
 
-print(df)               # order_id, product_id, description, Qty, price 분석에 필요x
+print(df)               # order_id, product_id, description, Qty, price 분석에 필요x / 이 코멘트들은 처음에 썼던 코멘트임
 print(df.info())        # order date type이 시분초까지 다 나와있는 object -> 조절 필요
 print(df.describe())    # Qty 및 total에 마이너스값이 있지만 환불일 것으로 추정(고객별 합계 확인해서 더블체크 필요)
 print(df.isna().sum())  # 공란데이터 없음
@@ -60,27 +60,24 @@ print(df)
 
 
 # Groupby
-
-
 df_groupsum = df.groupby('customer_id').sum().reset_index()
-# df_groupsum1 = df.groupby(['customer_id', 'yyyy-mm']).sum().reset_index()
 print(df_groupsum) 
+df_groupsum1 = df.groupby(['customer_id', 'yyyy-mm']).sum().reset_index()
+print(df_groupsum1) # id별 월별 total계 -> 무시
 
-
-# print(df_groupsum1) # id별 월별 total계 -> 무시
-df_groupcountry = df.groupby('country').sum().reset_index()
-print(df_groupcountry.sort_values(by='total', ascending=True)) 
 
 
 # # 40개국가를 total계 오름차순으로 정렬해서 rank 부여 (1~41) 후 df에 추가 (범주화화고싶었지만 실패)
+df_groupcountry = df.groupby('country').sum().reset_index()
+print(df_groupcountry.sort_values(by='total', ascending=True)) 
 grouped_country = df_groupcountry.sort_values(by='total', ascending=True)
 grouped_country = grouped_country.drop(columns = ['quantity', 'price','customer_id'])
 print(grouped_country)
-print(grouped_country.iloc[:8])
-print(grouped_country.iloc[8:16])
-print(grouped_country.iloc[16:24])
-print(grouped_country.iloc[24:32])
-print(grouped_country.iloc[32:])
+# print(grouped_country.iloc[:8])
+# print(grouped_country.iloc[8:16])
+# print(grouped_country.iloc[16:24])
+# print(grouped_country.iloc[24:32])
+# print(grouped_country.iloc[32:])
 grouped_country['r_country'] = grouped_country['total'].rank(method = 'min', ascending = True)
 grouped_country = grouped_country.drop(columns = 'total')
 print(grouped_country)
@@ -152,8 +149,31 @@ df_t.columns = ['12m_before','11m_before','10m_before','09m_before','08m_before'
 
 
 
+# #생성한 모델을 적용할 데이터셋(x : 2010-12 ~ 2011-11 / y : 아직없음)
+df_p = df1.iloc[:,12:]  
+print(df_p)
+df_p.columns = ['12m_before','11m_before','10m_before','09m_before','08m_before','07m_before','06m_before','05m_before','04m_before','03m_before','02m_before','01m_before']
 
 
+
+
+
+# ###########추가된 변수 관련 : 넣으니까 점수 떨어짐 (AUC : 0.66 -> 0.65) 조금있다가 다시
+df_t['customer_id'] = df_t.index
+df_t.insert(0,'r_country',df_t['customer_id'].map(df_groupcountry1.set_index('customer_id')['r_country']))
+df_t.insert(1,'t_total',df_t['customer_id'].map(df_groupcountry1.set_index('customer_id')['total']))
+df_t.insert(2,'r_product',df_t['customer_id'].map(grouped_product2.set_index('customer_id')['r_product']))
+df_t=df_t.drop(columns = 'customer_id')
+print(df_t)
+df_p['customer_id'] = df_p.index
+df_p.insert(0,'r_country',df_p['customer_id'].map(df_groupcountry1.set_index('customer_id')['r_country']))
+df_p.insert(1,'t_total',df_p['customer_id'].map(df_groupcountry1.set_index('customer_id')['total']))
+df_p.insert(2,'r_product',df_p['customer_id'].map(grouped_product2.set_index('customer_id')['r_product']))
+df_p=df_p.drop(columns = 'customer_id')
+print(df_p)
+# # 중요도 낮거나 상관관계 높은 변수 삭제시도 : 효과x
+df_t = df_t.drop(columns = ['04m_before', '01m_before', 'r_country'])
+df_p = df_p.drop(columns = ['04m_before', '01m_before', 'r_country'])
 
 
 
@@ -176,33 +196,6 @@ def correlation_heatmap(df_t):
     )
 correlation_heatmap(df_t)
 # plt.show()
-
-
-# #생성한 모델을 적용할 데이터셋(x : 2010-12 ~ 2011-11 / y : 아직없음)
-df_p = df1.iloc[:,12:]  
-print(df_p)
-df_p.columns = ['12m_before','11m_before','10m_before','09m_before','08m_before','07m_before','06m_before','05m_before','04m_before','03m_before','02m_before','01m_before']
-
-
-
-'''
-# ###########추가된 변수 관련 : 넣으니까 점수 떨어짐 (AUC : 0.66 -> 0.65)
-df_t['customer_id'] = df_t.index
-df_t.insert(0,'r_country',df_t['customer_id'].map(df_groupcountry1.set_index('customer_id')['r_country']))
-df_t.insert(1,'t_total',df_t['customer_id'].map(df_groupcountry1.set_index('customer_id')['total']))
-df_t.insert(2,'r_product',df_t['customer_id'].map(grouped_product2.set_index('customer_id')['r_product']))
-df_t=df_t.drop(columns = 'customer_id')
-print(df_t)
-df_p['customer_id'] = df_p.index
-df_p.insert(0,'r_country',df_p['customer_id'].map(df_groupcountry1.set_index('customer_id')['r_country']))
-df_p.insert(1,'t_total',df_p['customer_id'].map(df_groupcountry1.set_index('customer_id')['total']))
-df_p.insert(2,'r_product',df_p['customer_id'].map(grouped_product2.set_index('customer_id')['r_product']))
-df_p=df_p.drop(columns = 'customer_id')
-print(df_p)
-# # 중요도 낮은 변수 삭제시도 : 효과x
-# df_t = df_t.drop(columns = ['10m_before', 'r_country', '11m_before'])
-# df_p = df_p.drop(columns = ['10m_before', 'r_country', '11m_before'])
-'''
 
 
 
@@ -240,6 +233,7 @@ rf_y_pred = rf.predict(X_test)
 print("RandomForest Train score: ",rf.score(X_train, y_train))
 print("RandomForest Test score: ",rf.score(X_test, y_test))
 # print("RandomForest Test score: ",metrics.accuracy_score(y_test, rf_y_pred))  - 위에꺼랑 다른표현 같은결과값
+
 
 
 # AdaBoost classifier
@@ -372,23 +366,19 @@ plt.title('CatBoost features Importances:');
     # lgbm_wrapper_model : Light GBM Test score : 0.8904665314401623
     # cbc : Cat Boost Test Score : 0.9066937119675457
 
-
-# Save model to disk
+# Save model to disk - pickle 라는 기능?
 import pickle
 filename = 'Final_Model.sav'
 pickle.dump(cbc, open(filename, 'wb')) #적용할 모델을 여기에 입력
-
 # Load model from disk and use it to make new predictions
 loaded_model = pickle.load(open(filename, 'rb'))
 result = loaded_model.score(X_test, y_test)
 print("loaded model score : ",result)
-
 # Load test dataset
 for_predict = df_p.copy()
 pred = loaded_model.predict(for_predict)    # 모델을 적용한 예측값
 print(pred)
-print(len(pred))
-
+print(len(pred)) # y값이 5914개로 잘 나옴 -> 행으로 옮기면됨
 # 예측값 채우기
 pred = np.array(pred)
 pred = pred.reshape(-1,1)
